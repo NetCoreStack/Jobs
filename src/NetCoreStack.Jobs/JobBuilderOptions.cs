@@ -25,7 +25,7 @@ namespace NetCoreStack.Jobs
             {
                 throw new ArgumentOutOfRangeException($"{nameof(cronExpression)} is not valid!");
             }
-
+            
             JobList.Add(new JobDescriptor(cron, typeof(TJob)));
         }
     }

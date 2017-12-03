@@ -2,8 +2,10 @@
 using Newtonsoft.Json;
 using StackExchange.Redis;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,15 +29,23 @@ namespace NetCoreStack.Jobs
         private const string TypeKey = "type";
         private readonly RedisStorageOptions _options;
         private readonly string _instance;
+        private static readonly ConcurrentDictionary<string, Assembly> _cache = new ConcurrentDictionary<string, Assembly>();
 
         private readonly SemaphoreSlim _connectionLock = new SemaphoreSlim(initialCount: 1, maxCount: 1);
+        protected List<Assembly> AssemblyList { get; }
 
-        public RedisStorage(IOptions<RedisStorageOptions> optionsAccessor)
+        public RedisStorage(IOptions<RedisStorageOptions> optionsAccessor, AssemblyOptions assemblyOptions)
         {
             if (optionsAccessor == null)
             {
                 throw new ArgumentNullException(nameof(optionsAccessor));
             }
+
+            if (assemblyOptions == null)
+            {
+                throw new ArgumentNullException(nameof(assemblyOptions));
+            }
+
 
             _options = optionsAccessor.Value;
 
@@ -45,6 +55,31 @@ namespace NetCoreStack.Jobs
             }
 
             _instance = _options.InstanceName + ":";
+            AssemblyList = assemblyOptions.AssemblyList;
+        }
+
+        private Type TryGetType(string fullname)
+        {
+            if(_cache.TryGetValue(fullname, out Assembly assembly))
+            {
+                return assembly.GetType(fullname, false);
+            }
+
+            foreach (var item in AssemblyList)
+            {
+                Type type = item.GetType(fullname, false);
+                if (type != null)
+                {
+                    if (!_cache.ContainsKey(fullname))
+                    {
+                        _cache.TryAdd(fullname, item);
+                    }
+
+                    return type;
+                }
+            }
+
+            throw new ArgumentOutOfRangeException(fullname);
         }
 
         private RedisValue[] GetRedisMembers(params string[] members)
@@ -279,6 +314,55 @@ namespace NetCoreStack.Jobs
             }
 
             return list;
+        }
+
+        public async Task<List<IJob>> GetJobsAsync()
+        {
+            List<IJob> jobs = new List<IJob>();
+            var keys = await GetAllKeysAsync();
+            if (keys != null && keys.Any())
+            {
+                foreach (var key in keys)
+                {
+                    StorageResult redisResult = Get(key);
+                    if (redisResult != null)
+                    {
+                        var type = TryGetType(redisResult.Type);
+                        var job = (IJob)JsonConvert.DeserializeObject((string)redisResult.Data, type);
+                        jobs.Add(job);
+                    }
+                }
+            }
+
+            return jobs;
+        }
+
+        public async Task<List<T>> GetTypedJobsAsync<T>() where T : IJob
+        {
+            List<T> jobs = new List<T>();
+            var keys = await GetAllKeysAsync();
+            if (keys != null && keys.Any())
+            {
+                var assembly = typeof(T).Assembly;
+                foreach (var key in keys)
+                {
+                    StorageResult redisResult = Get(key);
+                    if (redisResult != null)
+                    {
+                        var fullname = redisResult.Type;
+                        var typedEvent = typeof(T).FullName;
+
+                        if (fullname == typedEvent)
+                        {
+                            var type = assembly.GetType(redisResult.Type, false);
+                            var job = (T)JsonConvert.DeserializeObject((string)redisResult.Data, type);
+                            jobs.Add(job);
+                        }
+                    }
+                }
+            }
+
+            return jobs;
         }
 
         public void Dispose()

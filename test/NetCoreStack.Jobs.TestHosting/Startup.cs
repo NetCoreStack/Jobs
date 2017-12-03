@@ -21,7 +21,9 @@ namespace NetCoreStack.Jobs.TestHosting
 
             services.AddNetCoreStackJobServer(setup =>
             {
+                setup.Register<JobWorker>(Cron.Minutely());
                 setup.Register<SampleJob>(Cron.Minutely());
+                setup.Register<SampleJob2>(Cron.MinuteInterval(2));
             });
         }
 

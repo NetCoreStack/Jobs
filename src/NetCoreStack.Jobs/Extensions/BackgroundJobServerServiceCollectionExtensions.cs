@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using System;
+using System.Linq;
 using System.Reflection;
 
 namespace NetCoreStack.Jobs
@@ -37,6 +39,11 @@ namespace NetCoreStack.Jobs
             }
 
             services.AddSingleton(opts);
+
+            var assemblies = opts.JobList.Select(j => j.GetType().Assembly).Distinct().ToList();
+            var assemblyOptions = new AssemblyOptions(assemblies);
+            services.AddSingleton(assemblyOptions);
+
             services.TryAdd(ServiceDescriptor.Singleton<IJobStorage, DefaultJobStorage>());
 
             return services;

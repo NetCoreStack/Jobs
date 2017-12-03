@@ -39,8 +39,6 @@ namespace NetCoreStack.Jobs
 
         private async Task RunAsync(ProcessableCronJob job, TaskContext context)
         {
-            await Task.CompletedTask;
-
             var cronSchedule = job.Schedule;
             var nowInstant = _instantFactory(cronSchedule, timeZone);
 

@@ -10,7 +10,6 @@ namespace NetCoreStack.Jobs
         public IReadOnlyDictionary<string, object> Properties { get; }
         public CancellationToken CancellationToken { get; }
         public bool IsShutdownRequested => CancellationToken.IsCancellationRequested;
-        public string CurrentTaskId { get; set; }
 
         public TaskContext(string serverId, IDictionary<string, object> properties,
             CancellationToken cancellationToken)

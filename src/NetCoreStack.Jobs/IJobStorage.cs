@@ -15,5 +15,7 @@ namespace NetCoreStack.Jobs
         Task RemoveKeysAsync(IEnumerable<IJob> jobs);
         void Set(string key, object instance);
         Task SetAsync(string key, object instance);
+        Task<List<IJob>> GetJobsAsync();
+        Task<List<T>> GetTypedJobsAsync<T>() where T : IJob;
     }
 }
