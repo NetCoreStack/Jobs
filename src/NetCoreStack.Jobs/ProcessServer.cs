@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 
 namespace NetCoreStack.Jobs
 {
-    internal class ProcessServer : ITaskProcess, IDisposable
+    internal class ProcessServer : IBackgroundTask, IDisposable
     {
-        private readonly IList<ITaskProcess> _processes;
+        private readonly IList<IBackgroundTask> _processes;
         private readonly IServiceProvider _serviceProvider;
         private readonly ILoggerFactory _loggerFactory;        
         private readonly JobBuilderOptions _options;
@@ -31,7 +31,7 @@ namespace NetCoreStack.Jobs
             }
         }
 
-        private ITaskProcess WrapProcess(ITaskProcess process)
+        private IBackgroundTask WrapProcess(IBackgroundTask process)
         {
             return new InfiniteLoopProcess(process);
         }
@@ -60,7 +60,7 @@ namespace NetCoreStack.Jobs
             var properties = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
             JobDictionary = new ConcurrentDictionary<string, ProcessableCronJob>(_options.JobList.ToDictionary(p => p.Id, p => new ProcessableCronJob(p)));
 
-            _processes = new List<ITaskProcess>
+            _processes = new List<IBackgroundTask>
             {
                 new CronJobScheduler(_serviceProvider, new EveryMinuteThrottler(), ScheduleInstant.Factory, JobDictionary, jobStorage, _loggerFactory)
             };
@@ -73,7 +73,7 @@ namespace NetCoreStack.Jobs
             _bootstrapTask = WrapProcess(this).CreateTask(_loggerFactory, context);
         }
 
-        public Task InvokeAsync(TaskContext context)
+        public void Invoke(TaskContext context)
         {
             try
             {
@@ -88,8 +88,6 @@ namespace NetCoreStack.Jobs
             {
                 
             }
-
-            return Task.CompletedTask;
         }
 
         public void SendStop()

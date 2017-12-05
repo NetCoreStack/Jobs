@@ -1,7 +1,7 @@
 ﻿namespace NetCoreStack.Jobs
 {
-    internal interface IBackgroundProcessWrapper : ITaskProcess
+    internal interface IBackgroundProcessWrapper : IBackgroundTask
     {
-        ITaskProcess InnerProcess { get; }
+        IBackgroundTask InnerProcess { get; }
     }
 }

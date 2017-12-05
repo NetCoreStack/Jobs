@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace NetCoreStack.Jobs
 {
-    internal class CronJobScheduler : ITaskProcess
+    internal class CronJobScheduler : IBackgroundTask
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly IThrottler _throttler;
@@ -95,16 +95,14 @@ namespace NetCoreStack.Jobs
             return lastInstant;
         }
 
-        public async Task InvokeAsync(TaskContext context)
+        public void Invoke(TaskContext context)
         {
             if (context == null) throw new ArgumentNullException(nameof(context));
-
-            await Task.CompletedTask;
 
             _throttler.Throttle(context.CancellationToken);
 
             var cronJobs = _jobDictionary.Select(p => p.Value).ToArray();
-            await Task.WhenAll(cronJobs.Select(job => RunAsync(job, context)));
+            Task.WhenAll(cronJobs.Select(job => RunAsync(job, context)));
 
             _throttler.Delay(context.CancellationToken);
         }

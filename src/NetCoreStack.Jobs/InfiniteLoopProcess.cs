@@ -5,18 +5,18 @@ namespace NetCoreStack.Jobs
 {
     internal class InfiniteLoopProcess : IBackgroundProcessWrapper
     {
-        public InfiniteLoopProcess(ITaskProcess innerProcess)
+        public InfiniteLoopProcess(IBackgroundTask innerProcess)
         {
             InnerProcess = innerProcess ?? throw new ArgumentNullException(nameof(innerProcess));
         }
 
-        public ITaskProcess InnerProcess { get; }
+        public IBackgroundTask InnerProcess { get; }
 
-        public async Task InvokeAsync(TaskContext context)
+        public void Invoke(TaskContext context)
         {
             while (!context.IsShutdownRequested)
             {
-                await InnerProcess.InvokeAsync(context);
+                InnerProcess.Invoke(context);
             }
         }
 

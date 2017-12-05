@@ -18,7 +18,7 @@ namespace NetCoreStack.Jobs
             }
         }
 
-        public static Type GetProcessType(this ITaskProcess process)
+        public static Type GetProcessType(this IBackgroundTask process)
         {
             if (process == null) throw new ArgumentNullException(nameof(process));
 
@@ -32,13 +32,13 @@ namespace NetCoreStack.Jobs
             return nextProcess.GetType();
         }
 
-        public static Task CreateTask(this ITaskProcess process, ILoggerFactory loggerFactory, TaskContext context)
+        public static Task CreateTask(this IBackgroundTask process, ILoggerFactory loggerFactory, TaskContext context)
         {
             if (process == null) throw new ArgumentNullException(nameof(process));
 
-            if (!(process is ITaskProcess))
+            if (!(process is IBackgroundTask))
             {
-                throw new ArgumentOutOfRangeException(nameof(process), "Long-running process must be of type IBackgroundProcess.");
+                throw new ArgumentOutOfRangeException(nameof(process), "Long-running process must be of type IBackgroundTask.");
             }
 
             return Task.Factory.StartNew(
@@ -46,21 +46,16 @@ namespace NetCoreStack.Jobs
                 TaskCreationOptions.LongRunning);
         }
 
-        private static async Task RunProcess(ITaskProcess process, ILoggerFactory loggerFactory, TaskContext context)
+        private static void RunProcess(IBackgroundTask process, ILoggerFactory loggerFactory, TaskContext context)
         {
-            // Long-running tasks are based on custom threads (not threadpool ones) as in 
-            // .NET Framework 4.5, so we can try to set custom thread name to simplify the
-            // debugging experience.
             TrySetThreadName(process.ToString());
-
-            // LogProvider.GetLogger does not throw any exception, that is why we are not
-            // using the `try` statement here. It does not return `null` value as well.
+            
             var logger = loggerFactory.CreateLogger(process.GetProcessType());
             logger.LogDebug($"Background process '{process}' started.");
 
             try
             {
-                await process.InvokeAsync(context);
+                process.Invoke(context);
             }
             catch (Exception ex)
             {
