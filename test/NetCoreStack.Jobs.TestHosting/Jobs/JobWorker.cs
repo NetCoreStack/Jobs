@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Threading.Tasks;
 
 namespace NetCoreStack.Jobs.TestHosting.Jobs
@@ -6,12 +7,14 @@ namespace NetCoreStack.Jobs.TestHosting.Jobs
     public class JobWorker : IJob
     {
         private readonly IJobStorage _jobStorage;
+        private readonly ILoggerFactory _loggerFactory;
 
         public string Id => "1";
 
-        public JobWorker(IJobStorage jobStorage)
+        public JobWorker(IJobStorage jobStorage, ILoggerFactory loggerFactory)
         {
             _jobStorage = jobStorage;
+            _loggerFactory = loggerFactory;
         }
 
         public async Task InvokeAsync(TaskContext context)
@@ -29,7 +32,8 @@ namespace NetCoreStack.Jobs.TestHosting.Jobs
                     }
                     catch (Exception ex)
                     {
-                        // suppress
+                        var logger = _loggerFactory.CreateLogger(typeof(JobWorker));
+                        logger.LogError("Job execution error: ", ex);
                     }
                     finally
                     {
